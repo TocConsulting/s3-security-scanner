@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "s3-security-scanner"
+version = "1.0.0"
+description = "A comprehensive AWS S3 bucket security scanner with compliance mapping"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    {name = "Toc Consulting", email = "tarek@tocconsulting.fr"}
+]
+keywords = ["aws", "s3", "security", "compliance", "scanner", "cloud", "audit"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: System Administrators",
+    "Intended Audience :: Developers",
+    "Topic :: Security",
+    "Topic :: System :: Systems Administration",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "boto3>=1.26.0",
+    "botocore>=1.29.0",
+    "rich>=13.0.0",
+    "click>=8.1.0",
+    "jinja2>=3.1.0",
+    "dnspython>=2.4.0",
+    "requests>=2.28.0",
+    "urllib3>=1.26.0",
+]
+
+[project.optional-dependencies]
+async = [
+    "aiodns>=3.0.0",
+]
+dev = [
+    "pytest>=7.2.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+    "moto[s3]>=4.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/TocConsulting/s3-security-scanner"
+Documentation = "https://github.com/TocConsulting/s3-security-scanner#readme"
+Repository = "https://github.com/TocConsulting/s3-security-scanner"
+Issues = "https://github.com/TocConsulting/s3-security-scanner/issues"
+
+[project.scripts]
+s3-security-scanner = "s3_security_scanner.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["s3_security_scanner*"]
+
+[tool.setuptools.package-data]
+"s3_security_scanner.discovery" = ["*.txt"]
+"s3_security_scanner.templates" = ["*.html"]
+
+[tool.black]
+line-length = 79
+target-version = ['py38', 'py39', 'py310', 'py311', "py312", "py313"]
+include = '\.pyi?$'
+
+[tool.flake8]
+max-line-length = 79
+extend-ignore = ["E203", "W503"]
+exclude = [".git", "__pycache__", "build", "dist", "s3_security_scanner.egg-info"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
