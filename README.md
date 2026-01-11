@@ -1,6 +1,6 @@
 # S3 Security Scanner
 
-[![PyPI version](https://badge.fury.io/py/s3-security-scanner.svg)](https://badge.fury.io/py/s3-security-scanner)
+[![PyPI version](https://img.shields.io/pypi/v/s3-security-scanner.svg)](https://pypi.org/project/s3-security-scanner/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![AWS](https://img.shields.io/badge/AWS-S3-orange.svg)](https://aws.amazon.com/s3/)
