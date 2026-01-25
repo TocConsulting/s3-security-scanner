@@ -1,6 +1,7 @@
 # S3 Security Scanner
 
 [![PyPI version](https://img.shields.io/pypi/v/s3-security-scanner.svg)](https://pypi.org/project/s3-security-scanner/)
+[![Docker](https://img.shields.io/docker/v/tarekcheikh/s3-security-scanner?label=docker&logo=docker)](https://hub.docker.com/r/tarekcheikh/s3-security-scanner)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
 [![AWS](https://img.shields.io/badge/AWS-S3-orange.svg)](https://aws.amazon.com/s3/)
@@ -58,6 +59,13 @@ pip install s3-security-scanner
 git clone https://github.com/TocConsulting/s3-security-scanner.git
 cd s3-security-scanner
 pip install .
+```
+
+### Docker Installation
+
+```bash
+# Pull from Docker Hub
+docker pull tarekcheikh/s3-security-scanner:latest
 ```
 
 ### Basic Usage
@@ -186,6 +194,122 @@ s3-security-scanner dns --domain example.com --domain test.com
 # Use AWS profile for Route53 scanning
 s3-security-scanner dns --domain example.com --profile production
 ```
+
+## Docker Usage
+
+Run the scanner using Docker without installing Python dependencies locally.
+
+### Pull the Docker Image
+
+```bash
+# Pull the latest version
+docker pull tarekcheikh/s3-security-scanner:latest
+
+# Or pull a specific version
+docker pull tarekcheikh/s3-security-scanner:1.0.1
+```
+
+### Basic Docker Commands
+
+```bash
+# Show help
+docker run --rm tarekcheikh/s3-security-scanner --help
+
+# Show help for a specific command
+docker run --rm tarekcheikh/s3-security-scanner security --help
+```
+
+### Security Scanning with Docker
+
+**AWS Credentials:** The examples below mount `~/.aws` to provide credentials. By default, the scanner uses the `default` profile. Use `--profile <name>` to specify a different profile.
+
+```bash
+# Scan all buckets using the default AWS profile
+docker run --rm \
+  -v ~/.aws:/root/.aws:ro \
+  -v $(pwd)/output:/app/output \
+  tarekcheikh/s3-security-scanner security
+
+# Scan using a specific AWS profile
+docker run --rm \
+  -v ~/.aws:/root/.aws:ro \
+  -v $(pwd)/output:/app/output \
+  tarekcheikh/s3-security-scanner security --profile production
+
+# Scan specific buckets only
+docker run --rm \
+  -v ~/.aws:/root/.aws:ro \
+  -v $(pwd)/output:/app/output \
+  tarekcheikh/s3-security-scanner security --bucket my-bucket-1 --bucket my-bucket-2
+
+# Fast compliance-only scan
+docker run --rm \
+  -v ~/.aws:/root/.aws:ro \
+  -v $(pwd)/output:/app/output \
+  tarekcheikh/s3-security-scanner security --compliance-only --no-object-scan
+```
+
+### Bucket Discovery with Docker
+
+```bash
+# Discover buckets for a target (no AWS credentials needed)
+docker run --rm \
+  -v $(pwd)/output:/app/output \
+  tarekcheikh/s3-security-scanner discover --target "company-name" --only
+
+# Advanced discovery with more permutations
+docker run --rm \
+  -v $(pwd)/output:/app/output \
+  tarekcheikh/s3-security-scanner discover --target "company-name" --level advanced --only
+```
+
+### DNS Scanning with Docker
+
+```bash
+# Check domains for takeover vulnerabilities
+docker run --rm \
+  -v $(pwd)/output:/app/output \
+  tarekcheikh/s3-security-scanner dns --domain example.com
+
+# With Route53 scanning (requires AWS credentials)
+docker run --rm \
+  -v ~/.aws:/root/.aws:ro \
+  -v $(pwd)/output:/app/output \
+  tarekcheikh/s3-security-scanner dns --domain example.com --profile production
+```
+
+### Using Environment Variables for AWS Credentials
+
+Instead of mounting `~/.aws`, you can pass credentials via environment variables:
+
+```bash
+# Pass AWS credentials via environment variables
+docker run --rm \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  -v $(pwd)/output:/app/output \
+  tarekcheikh/s3-security-scanner security
+
+# With session token (for temporary credentials/assumed roles)
+docker run --rm \
+  -e AWS_ACCESS_KEY_ID \
+  -e AWS_SECRET_ACCESS_KEY \
+  -e AWS_SESSION_TOKEN \
+  -e AWS_DEFAULT_REGION=us-east-1 \
+  -v $(pwd)/output:/app/output \
+  tarekcheikh/s3-security-scanner security
+```
+
+### Docker Volume Mounts Explained
+
+| Mount | Purpose |
+|-------|---------|
+| `-v ~/.aws:/root/.aws:ro` | Mount AWS credentials directory (read-only). Uses `default` profile unless `--profile` is specified |
+| `-v $(pwd)/output:/app/output` | Save reports to your local `./output` directory |
+| `-v /path/to/wordlist.txt:/app/wordlist.txt` | Use a custom wordlist for discovery |
+
+**Important:** Without the output volume mount (`-v $(pwd)/output:/app/output`), report files will not be accessible after the container exits.
 
 ## Prerequisites
 

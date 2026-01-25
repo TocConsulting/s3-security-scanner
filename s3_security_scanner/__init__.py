@@ -1,7 +1,7 @@
 """S3 Security Scanner - A comprehensive AWS S3 bucket security scanner
 with compliance mapping."""
 
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __author__ = "Toc Consulting"
 __email__ = "tarek@tocconsulting.fr"
 
