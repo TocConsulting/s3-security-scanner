@@ -1,10 +1,14 @@
-# S3 Security Scanner
+<p align="center">
+  <img src="https://raw.githubusercontent.com/TocConsulting/s3-security-scanner/main/assets/logo.jpg" alt="S3 Security Scanner" width="600">
+</p>
 
-[![PyPI version](https://img.shields.io/pypi/v/s3-security-scanner.svg)](https://pypi.org/project/s3-security-scanner/)
-[![Docker](https://img.shields.io/docker/v/tarekcheikh/s3-security-scanner?label=docker&logo=docker)](https://hub.docker.com/r/tarekcheikh/s3-security-scanner)
-[![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![AWS](https://img.shields.io/badge/AWS-S3-orange.svg)](https://aws.amazon.com/s3/)
+<p align="center">
+  <a href="https://pypi.org/project/s3-security-scanner/"><img src="https://img.shields.io/pypi/v/s3-security-scanner.svg" alt="PyPI version"></a>
+  <a href="https://hub.docker.com/r/tarekcheikh/s3-security-scanner"><img src="https://img.shields.io/docker/v/tarekcheikh/s3-security-scanner?label=docker&logo=docker" alt="Docker"></a>
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-brightgreen.svg" alt="License: MIT"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8+-blue.svg" alt="Python"></a>
+  <a href="https://aws.amazon.com/s3/"><img src="https://img.shields.io/badge/AWS-S3-orange.svg" alt="AWS"></a>
+</p>
 
 A comprehensive, production-ready AWS S3 bucket security scanner with compliance mapping for CIS, AWS FSBP, PCI-DSS, HIPAA, SOC 2, ISO frameworks, and GDPR. Features multi-threaded scanning, object-level security analysis, and detailed remediation guidance.
 
