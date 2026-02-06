@@ -4,6 +4,7 @@
 
 <p align="center">
   <a href="https://pypi.org/project/s3-security-scanner/"><img src="https://img.shields.io/pypi/v/s3-security-scanner.svg" alt="PyPI version"></a>
+  <a href="https://pepy.tech/project/s3-security-scanner"><img src="https://static.pepy.tech/badge/s3-security-scanner" alt="Downloads"></a>
   <a href="https://hub.docker.com/r/tarekcheikh/s3-security-scanner"><img src="https://img.shields.io/docker/v/tarekcheikh/s3-security-scanner?label=docker&logo=docker" alt="Docker"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-brightgreen.svg" alt="License: MIT"></a>
   <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8+-blue.svg" alt="Python"></a>
