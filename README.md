@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/TocConsulting/s3-security-scanner/main/assets/logo.jpg" alt="S3 Security Scanner" style="max-width: 100%; height: auto;">
+  <img src="https://raw.githubusercontent.com/TocConsulting/s3-security-scanner/main/assets/logo.png" alt="S3 Security Scanner" style="max-width: 100%; height: auto;">
 </p>
 
 <p align="center">
