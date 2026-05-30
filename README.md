@@ -14,6 +14,10 @@
 
 A comprehensive, production-ready AWS S3 bucket security scanner with compliance mapping for CIS, AWS FSBP, PCI-DSS, HIPAA, SOC 2, ISO frameworks, and GDPR. Features multi-threaded scanning, object-level security analysis, and detailed remediation guidance.
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/TocConsulting/s3-security-scanner/main/assets/demo.gif" alt="S3 Security Scanner demo: scan, scores, and multi-framework compliance" width="100%">
+</p>
+
 ## Key Features
 
 ### **Comprehensive Security Analysis**
