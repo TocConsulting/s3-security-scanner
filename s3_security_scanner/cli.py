@@ -447,8 +447,16 @@ def discover(target, level, methods, only, wordlist, stealth, region, profile, o
     is_flag=True,
     help="Skip object analysis for faster results"
 )
+@click.option(
+    "--trusted-account",
+    multiple=True,
+    help=(
+        "AWS account ID(s) allowed as replication destinations. Suppresses "
+        "the external-replication finding for these accounts. Repeatable."
+    )
+)
 @shared_options
-def security(bucket, exclude_bucket, compliance_only, no_object_scan, region, profile, output_dir, output_format, max_workers, quiet, debug):
+def security(bucket, exclude_bucket, compliance_only, no_object_scan, trusted_account, region, profile, output_dir, output_format, max_workers, quiet, debug):
     """
     Scan your S3 buckets for security vulnerabilities and compliance issues.
 
@@ -478,6 +486,7 @@ def security(bucket, exclude_bucket, compliance_only, no_object_scan, region, pr
             profile=profile,
             output_dir=output_dir,
             max_workers=max_workers,
+            trusted_accounts=list(trusted_account),
         )
 
         # Configure object-level scanning option

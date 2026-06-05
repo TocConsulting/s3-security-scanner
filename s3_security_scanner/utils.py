@@ -120,6 +120,10 @@ def calculate_security_score(checks: Dict[str, Any]) -> int:
     if not get_check_result("lifecycle_rules", "has_lifecycle_rules", False):
         score -= 2
 
+    # Cross-account replication is a potential exfiltration backdoor
+    if get_check_result("replication", "has_external_replication", False):
+        score -= 20
+
     # Ensure score doesn't go below 0
     return max(0, score)
 

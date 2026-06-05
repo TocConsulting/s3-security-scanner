@@ -269,8 +269,33 @@ class AccessControlChecker:
                 "eventbridge_enabled": False,
             }
 
-    def check_replication(self, bucket_name: str, client) -> Dict[str, Any]:
-        """Check if bucket has replication configured."""
+    def check_replication(
+        self,
+        bucket_name: str,
+        client,
+        account_id: str = None,
+        trusted_accounts=None,
+    ) -> Dict[str, Any]:
+        """Check bucket replication configuration.
+
+        Beyond reporting whether replication exists, this detects cross-account
+        ("external") replication destinations. Replication to a bucket in
+        another AWS account is a silent data-exfiltration backdoor: every new
+        object is copied to the attacker's account, and it keeps running even
+        after the attacker's access to the source bucket is revoked. Trusted
+        destination accounts (e.g. a known DR account) can be allow-listed.
+        """
+        trusted = set(trusted_accounts or [])
+        empty = {
+            "has_replication": False,
+            "replication_rule_count": 0,
+            "enabled_rule_count": 0,
+            "replication_role": "",
+            "rules": [],
+            "destinations": [],
+            "external_destinations": [],
+            "has_external_replication": False,
+        }
         try:
             response = client.get_bucket_replication(Bucket=bucket_name)
 
@@ -282,12 +307,42 @@ class AccessControlChecker:
                 rule for rule in rules if rule.get("Status") == "Enabled"
             ]
 
+            destinations = []
+            external_destinations = []
+            for rule in rules:
+                dest = rule.get("Destination", {}) or {}
+                dest_account = dest.get("Account")
+                entry = {
+                    "rule_id": rule.get("ID", ""),
+                    "status": rule.get("Status", ""),
+                    "destination_bucket": dest.get("Bucket", ""),
+                    "destination_account": dest_account,
+                }
+                destinations.append(entry)
+                # A destination Account that is set and differs from this
+                # bucket's account is cross-account replication. Trusted
+                # accounts are suppressed via the allow-list.
+                if (
+                    dest_account
+                    and account_id
+                    and dest_account != account_id
+                    and dest_account not in trusted
+                ):
+                    external_destinations.append(entry)
+
+            has_external = any(
+                e["status"] == "Enabled" for e in external_destinations
+            )
+
             return {
                 "has_replication": len(rules) > 0,
                 "replication_rule_count": len(rules),
                 "enabled_rule_count": len(enabled_rules),
                 "replication_role": replication_config.get("Role", ""),
                 "rules": rules,
+                "destinations": destinations,
+                "external_destinations": external_destinations,
+                "has_external_replication": has_external,
             }
 
         except ClientError as e:
@@ -295,22 +350,11 @@ class AccessControlChecker:
                 e.response["Error"]["Code"]
                 == "ReplicationConfigurationNotFoundError"
             ):
-                return {
-                    "has_replication": False,
-                    "replication_rule_count": 0,
-                    "enabled_rule_count": 0,
-                    "replication_role": "",
-                    "rules": [],
-                }
+                return dict(empty)
             else:
-                return {
-                    "has_replication": False,
-                    "replication_rule_count": 0,
-                    "enabled_rule_count": 0,
-                    "replication_role": "",
-                    "rules": [],
-                    "error": str(e),
-                }
+                result = dict(empty)
+                result["error"] = str(e)
+                return result
 
     def check_transfer_acceleration(
         self, bucket_name: str, client

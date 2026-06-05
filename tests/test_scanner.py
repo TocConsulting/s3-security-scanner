@@ -467,6 +467,83 @@ class TestS3SecurityScanner(unittest.TestCase):
         self.assertFalse(result['has_replication'])
         self.assertEqual(result['replication_rule_count'], 0)
 
+    def test_check_replication_external_account(self):
+        """Cross-account replication is flagged as an exfil backdoor."""
+        scanner = S3SecurityScanner(region='us-east-1')
+        scanner.account_id = '111111111111'
+        scanner.trusted_accounts = set()
+        mock_client = Mock()
+        mock_client.get_bucket_replication.return_value = {
+            'ReplicationConfiguration': {
+                'Role': 'arn:aws:iam::111111111111:role/repl',
+                'Rules': [
+                    {
+                        'Status': 'Enabled',
+                        'ID': 'exfil',
+                        'Destination': {
+                            'Bucket': 'arn:aws:s3:::attacker-bucket',
+                            'Account': '999999999999',
+                        },
+                    }
+                ],
+            }
+        }
+        result = scanner.check_replication('victim', mock_client)
+        self.assertTrue(result['has_external_replication'])
+        self.assertEqual(len(result['external_destinations']), 1)
+        self.assertEqual(
+            result['external_destinations'][0]['destination_account'],
+            '999999999999',
+        )
+
+    def test_check_replication_external_account_allowlisted(self):
+        """A trusted destination account suppresses the finding."""
+        scanner = S3SecurityScanner(region='us-east-1')
+        scanner.account_id = '111111111111'
+        scanner.trusted_accounts = {'999999999999'}
+        mock_client = Mock()
+        mock_client.get_bucket_replication.return_value = {
+            'ReplicationConfiguration': {
+                'Role': 'arn:aws:iam::111111111111:role/repl',
+                'Rules': [
+                    {
+                        'Status': 'Enabled',
+                        'ID': 'dr',
+                        'Destination': {
+                            'Bucket': 'arn:aws:s3:::dr-bucket',
+                            'Account': '999999999999',
+                        },
+                    }
+                ],
+            }
+        }
+        result = scanner.check_replication('src', mock_client)
+        self.assertFalse(result['has_external_replication'])
+
+    def test_check_replication_same_account_not_external(self):
+        """Same-account replication (no Account field) is not flagged."""
+        scanner = S3SecurityScanner(region='us-east-1')
+        scanner.account_id = '111111111111'
+        scanner.trusted_accounts = set()
+        mock_client = Mock()
+        mock_client.get_bucket_replication.return_value = {
+            'ReplicationConfiguration': {
+                'Role': 'arn:aws:iam::111111111111:role/repl',
+                'Rules': [
+                    {
+                        'Status': 'Enabled',
+                        'ID': 'dr',
+                        'Destination': {
+                            'Bucket': 'arn:aws:s3:::same-acct-bucket'
+                        },
+                    }
+                ],
+            }
+        }
+        result = scanner.check_replication('src', mock_client)
+        self.assertFalse(result['has_external_replication'])
+        self.assertTrue(result['has_replication'])
+
     def test_check_transfer_acceleration(self):
         """Test checking S3 transfer acceleration."""
         scanner = S3SecurityScanner(region='us-east-1')

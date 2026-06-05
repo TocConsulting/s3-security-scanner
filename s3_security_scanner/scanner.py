@@ -43,6 +43,7 @@ class S3SecurityScanner:
         profile: Optional[str] = None,
         output_dir: str = "./output",
         max_workers: int = 10,
+        trusted_accounts: Optional[List[str]] = None,
     ):
         """Initialize the S3 Security Scanner.
 
@@ -51,11 +52,14 @@ class S3SecurityScanner:
             profile: AWS profile name to use (default: None)
             output_dir: Directory for reports and logs (default: ./output)
             max_workers: Maximum parallel threads for scanning (default: 10)
+            trusted_accounts: AWS account IDs that are allowed replication
+                destinations; suppresses the external-replication finding.
         """
         self.region = region
         self.profile = profile
         self.output_dir = output_dir
         self.max_workers = max_workers
+        self.trusted_accounts = set(trusted_accounts or [])
         self.console = Console()
         self.skip_object_scan = False  # Configuration flag for object scanning
         self._regional_clients = {}  # Cache for regional clients
@@ -281,7 +285,7 @@ class S3SecurityScanner:
     def check_replication(self, bucket_name: str, client) -> Dict[str, Any]:
         """Check if bucket has replication configured."""
         return self.access_control_checker.check_replication(
-            bucket_name, client
+            bucket_name, client, self.account_id, self.trusted_accounts
         )
 
     def check_transfer_acceleration(
@@ -779,6 +783,40 @@ class S3SecurityScanner:
                     "description": "No cross-region replication configured",
                     "recommendation": (
                         "Consider enabling replication for disaster recovery and compliance"
+                    ),
+                }
+            )
+
+        # Cross-account replication = potential data-exfiltration backdoor.
+        # Every new object is auto-copied to a bucket in another account, and it
+        # keeps running even after the attacker's access is revoked.
+        if checks["replication"].get("has_external_replication", False):
+            enabled_ext = [
+                d
+                for d in checks["replication"].get("external_destinations", [])
+                if d.get("status") == "Enabled"
+            ]
+            dests = ", ".join(
+                f"{d.get('destination_bucket', '?')} "
+                f"(account {d.get('destination_account', '?')})"
+                for d in enabled_ext
+            )
+            issues.append(
+                {
+                    "severity": "CRITICAL",
+                    "issue_type": "external_account_replication",
+                    "description": (
+                        "Bucket replicates objects to an external AWS account "
+                        "(potential data-exfiltration backdoor): " + dests
+                    ),
+                    "recommendation": (
+                        "Verify the replication destination is a trusted "
+                        "account. If unexpected, remove the rule "
+                        "(aws s3api delete-bucket-replication) and rotate the "
+                        "replication role. Restrict "
+                        "s3:PutReplicationConfiguration to a designated "
+                        "pipeline principal, and allow-list known-good "
+                        "destinations with --trusted-account."
                     ),
                 }
             )
