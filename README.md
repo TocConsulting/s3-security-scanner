@@ -24,6 +24,7 @@ A comprehensive, production-ready AWS S3 bucket security scanner with compliance
 - **Public Access Detection**: Multi-layered detection via ACLs, policies, and public access settings
 - **Encryption Assessment**: Server-side encryption configuration analysis
 - **Access Controls**: Versioning, MFA delete, and object lock evaluation
+- **Replication Exfiltration Detection**: Flags cross-account replication destinations (a stealthy data-exfiltration backdoor) as CRITICAL, with a `--trusted-account` allow-list for legitimate DR accounts
 - **Object-Level Security**: Sample-based scanning for public objects and sensitive data patterns
 - **CORS Analysis**: Detection of overly permissive cross-origin configurations
 - **DNS Takeover Prevention**: Route53 and manual domain analysis for subdomain takeover risks
@@ -113,6 +114,9 @@ Options:
   --exclude-bucket TEXT      Bucket(s) to exclude from scanning
   --compliance-only          Generate compliance report only
   --no-object-scan           Skip object analysis for faster results
+  --trusted-account TEXT     AWS account ID(s) allowed as replication
+                             destinations; suppresses the external-replication
+                             finding for these accounts (repeatable)
   -d, --debug                Enable debug logging
   -q, --quiet                Suppress console output except errors
   -w, --max-workers INTEGER  Worker threads (default: 5)
@@ -132,6 +136,9 @@ s3-security-scanner security --exclude-bucket temp-bucket --exclude-bucket dev-s
 
 # Fast compliance-only scan
 s3-security-scanner security --compliance-only --no-object-scan -p production
+
+# Detect cross-account replication backdoors, allow-listing a known DR account
+s3-security-scanner security --trusted-account 111122223333
 
 # HTML report only
 s3-security-scanner security -f html -o ./reports
@@ -388,6 +395,7 @@ docker run --rm \
 | **Lifecycle Rules** | Evaluates lifecycle management policies | INFO |
 | **Event Notifications** | Checks for SNS/SQS/Lambda notification configuration | LOW |
 | **Cross-Region Replication** | Validates replication configuration for disaster recovery | MEDIUM |
+| **External-Account Replication** | Flags replication to a different AWS account (data-exfiltration backdoor); allow-list with `--trusted-account` | CRITICAL |
 | **Transfer Acceleration** | Checks S3 Transfer Acceleration configuration | LOW |
 | **Cross-Account Access** | Identifies cross-account principals in bucket policies | MEDIUM |
 | **MFA Requirements** | Validates MFA conditions in bucket policies | HIGH |
