@@ -479,13 +479,20 @@ class AccessControlChecker:
                 if not is_wildcard:
                     continue
                 condition = statement.get("Condition", {})
-                gated_on_ap = any(
-                    "s3:DataAccessPointAccount" in keys
-                    for keys in (
-                        v for v in condition.values() if isinstance(v, dict)
-                    )
-                )
-                if gated_on_ap:
+                cond_keys = set()
+                for op_val in condition.values():
+                    if isinstance(op_val, dict):
+                        cond_keys.update(k.lower() for k in op_val)
+                if "s3:dataaccesspointaccount" not in cond_keys:
+                    continue
+                # The bare account-wide delegation is the bypass smell. A
+                # further constraint (org/account principal restriction, or a
+                # specific access-point ARN) makes it safe, so do not flag it.
+                constrained = bool(cond_keys & {
+                    "aws:principalorgid", "aws:principalorgpaths",
+                    "aws:principalaccount", "s3:dataaccesspointarn",
+                })
+                if not constrained:
                     delegates = True
                     break
 

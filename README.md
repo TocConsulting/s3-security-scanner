@@ -398,7 +398,7 @@ docker run --rm \
 | **External-Account Replication** | Flags replication to a different AWS account (data-exfiltration backdoor); allow-list with `--trusted-account` | CRITICAL |
 | **External-Account Notification** | Flags event notifications (SQS/SNS/Lambda) targeting a different AWS account (exfiltration/persistence backdoor); allow-list with `--trusted-account` | CRITICAL |
 | **SSE-C Deny Guardrail** | Flags buckets whose policy does not deny SSE-C uploads (Codefinger ransomware TTP prevention) | MEDIUM |
-| **Access-Point Delegation** | Flags a bucket policy that delegates to ANY access point in the account (`s3:DataAccessPointAccount`), a CreateAccessPoint bypass | HIGH |
+| **Access-Point Delegation** | Flags a bucket policy that delegates to ANY access point in the account (`s3:DataAccessPointAccount`) with no org/account or specific-AP constraint; a CreateAccessPoint bypass to verify | MEDIUM |
 | **Transfer Acceleration** | Checks S3 Transfer Acceleration configuration | LOW |
 | **Cross-Account Access** | Identifies cross-account principals in bucket policies | MEDIUM |
 | **MFA Requirements** | Validates MFA conditions in bucket policies | HIGH |
@@ -501,10 +501,10 @@ Each bucket receives a security score (0-100) starting with **100 points** and l
 | **No SSL/TLS Enforcement** | **-15** | HIGH | Missing SSL/TLS enforcement |
 | **No Encryption** | **-20** | HIGH | Default encryption not enabled |
 | **Public Objects Found** | **-15** | HIGH | Objects with public ACLs detected |
-| **Access-Point Delegation** | **-15** | HIGH | Bucket policy delegates to any access point (`s3:DataAccessPointAccount` bypass) |
 | **No Versioning** | **-10** | MEDIUM | Versioning disabled |
 | **Sensitive Objects Found** | **-10** | MEDIUM | Potentially sensitive files detected |
 | **No SSE-C Deny Guardrail** | **-10** | MEDIUM | Bucket policy does not deny SSE-C uploads (Codefinger TTP) |
+| **Access-Point Delegation** | **-10** | MEDIUM | Bucket policy delegates to any account access point with no further constraint (`s3:DataAccessPointAccount` bypass to verify) |
 | **No MFA Delete** | **-5** | LOW | MFA delete not enabled |
 | **No Logging** | **-5** | LOW | Server access logging disabled |
 | **Risky CORS** | **-5** | LOW | Overly permissive CORS configuration |

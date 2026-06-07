@@ -641,6 +641,30 @@ class TestS3SecurityScanner(unittest.TestCase):
         )
         self.assertTrue(result['delegates_to_access_points'])
 
+    def test_check_access_point_delegation_constrained_not_flagged(self):
+        """Delegation further constrained by PrincipalOrgID is not flagged."""
+        scanner = S3SecurityScanner(region='us-east-1')
+        mock_client = Mock()
+        mock_client.get_bucket_policy.return_value = {
+            'Policy': json.dumps({
+                'Version': '2012-10-17',
+                'Statement': [{
+                    'Sid': 'DelegateButConstrained', 'Effect': 'Allow',
+                    'Principal': '*', 'Action': 's3:*',
+                    'Resource': ['arn:aws:s3:::b', 'arn:aws:s3:::b/*'],
+                    'Condition': {'StringEquals': {
+                        's3:DataAccessPointAccount': '111111111111',
+                        'aws:PrincipalOrgID': 'o-abc123'}},
+                }],
+            })
+        }
+        result = (
+            scanner.access_control_checker.check_access_point_delegation(
+                'b', mock_client
+            )
+        )
+        self.assertFalse(result['delegates_to_access_points'])
+
     def test_check_access_point_delegation_not_flagged(self):
         """A normal scoped policy does not trip the delegation check."""
         scanner = S3SecurityScanner(region='us-east-1')

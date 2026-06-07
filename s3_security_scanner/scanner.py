@@ -893,19 +893,22 @@ class S3SecurityScanner:
         ):
             issues.append(
                 {
-                    "severity": "HIGH",
+                    "severity": "MEDIUM",
                     "issue_type": "access_point_delegation",
                     "description": (
                         "Bucket policy delegates access to ANY access point in "
                         "the account (wildcard principal gated only on "
-                        "s3:DataAccessPointAccount); a principal who can call "
-                        "s3:CreateAccessPoint bypasses the bucket policy"
+                        "s3:DataAccessPointAccount, with no org/account or "
+                        "specific-access-point constraint). This is safe only "
+                        "while s3:CreateAccessPoint is tightly restricted: any "
+                        "principal who can create an access point reads through "
+                        "the bucket policy."
                     ),
                     "recommendation": (
-                        "Constrain the delegation to specific access point "
-                        "ARNs (or add aws:PrincipalOrgID), and treat "
-                        "s3:CreateAccessPoint as a sensitive permission and "
-                        "restrict it."
+                        "Verify s3:CreateAccessPoint is restricted to a "
+                        "designated principal. Constrain the delegation further "
+                        "with a specific access-point ARN "
+                        "(s3:DataAccessPointArn) or aws:PrincipalOrgID."
                     ),
                 }
             )

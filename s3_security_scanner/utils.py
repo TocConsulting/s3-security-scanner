@@ -134,11 +134,13 @@ def calculate_security_score(checks: Dict[str, Any]) -> int:
     if not get_check_result("ssec_protection", "denies_ssec", False):
         score -= 10
 
-    # Bucket policy delegates to any access point (access-point bypass)
+    # Bucket policy delegates to any access point (access-point bypass).
+    # MEDIUM: exploitable only with loose s3:CreateAccessPoint, which the
+    # scanner cannot verify, so this is a "verify" finding, not a confirmed one.
     if get_check_result(
         "access_point_delegation", "delegates_to_access_points", False
     ):
-        score -= 15
+        score -= 10
 
     # Ensure score doesn't go below 0
     return max(0, score)
