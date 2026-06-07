@@ -387,6 +387,120 @@ class AccessControlChecker:
                 result["error"] = str(e)
                 return result
 
+    def check_ssec_protection(
+        self, bucket_name: str, client
+    ) -> Dict[str, Any]:
+        """Check that the bucket policy denies SSE-C uploads.
+
+        SSE-C (server-side encryption with customer-provided keys) is abused by
+        the Codefinger ransomware TTP: an attacker with PutObject re-encrypts
+        objects with a key only they hold, and AWS keeps only an HMAC of it, so
+        the data cannot be recovered. It cannot be detected after the fact from
+        config; the defense is preventative. The AWS-recommended guardrail is a
+        Deny on s3:PutObject when the SSE-C algorithm header is present
+        (Condition Null on s3:x-amz-server-side-encryption-customer-algorithm).
+        This flags buckets missing that guardrail.
+        """
+        empty = {"has_policy": False, "denies_ssec": False}
+        try:
+            policy_response = client.get_bucket_policy(Bucket=bucket_name)
+            policy_str = policy_response.get("Policy", "")
+            if not policy_str:
+                return dict(empty)
+
+            policy = json.loads(policy_str)
+            denies_ssec = False
+            for statement in policy.get("Statement", []):
+                if statement.get("Effect") != "Deny":
+                    continue
+                action = statement.get("Action", [])
+                actions = [action] if isinstance(action, str) else action
+                covers_put = any(
+                    a in ("s3:PutObject", "s3:*", "*") for a in actions
+                )
+                if not covers_put:
+                    continue
+                # The condition gates on the SSE-C algorithm header in any of
+                # the operators AWS examples use (Null / StringNotEquals).
+                condition = statement.get("Condition", {})
+                gated_on_ssec = any(
+                    "s3:x-amz-server-side-encryption-customer-algorithm"
+                    in keys
+                    for keys in (
+                        v for v in condition.values() if isinstance(v, dict)
+                    )
+                )
+                if gated_on_ssec:
+                    denies_ssec = True
+                    break
+
+            return {"has_policy": True, "denies_ssec": denies_ssec}
+
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchBucketPolicy":
+                return dict(empty)
+            result = dict(empty)
+            result["error"] = str(e)
+            return result
+
+    def check_access_point_delegation(
+        self, bucket_name: str, client
+    ) -> Dict[str, Any]:
+        """Check for a bucket policy that delegates to ANY access point.
+
+        A bucket policy that allows access to a wildcard principal gated only on
+        the s3:DataAccessPointAccount condition trusts every access point in the
+        account, not a specific one. A principal who can call
+        s3:CreateAccessPoint then mints their own access point and reads
+        straight through the otherwise restrictive bucket policy. Either half is
+        fine alone; the broad delegation is the detectable smell.
+        """
+        empty = {"has_policy": False, "delegates_to_access_points": False}
+        try:
+            policy_response = client.get_bucket_policy(Bucket=bucket_name)
+            policy_str = policy_response.get("Policy", "")
+            if not policy_str:
+                return dict(empty)
+
+            policy = json.loads(policy_str)
+            delegates = False
+            for statement in policy.get("Statement", []):
+                if statement.get("Effect") != "Allow":
+                    continue
+                principal = statement.get("Principal", {})
+                is_wildcard = (
+                    principal == "*"
+                    or principal == {"AWS": "*"}
+                    or (
+                        isinstance(principal, dict)
+                        and principal.get("AWS", "") == "*"
+                    )
+                )
+                if not is_wildcard:
+                    continue
+                condition = statement.get("Condition", {})
+                gated_on_ap = any(
+                    "s3:DataAccessPointAccount" in keys
+                    for keys in (
+                        v for v in condition.values() if isinstance(v, dict)
+                    )
+                )
+                if gated_on_ap:
+                    delegates = True
+                    break
+
+            return {
+                "has_policy": True,
+                "delegates_to_access_points": delegates,
+            }
+
+        except ClientError as e:
+            if e.response["Error"]["Code"] == "NoSuchBucketPolicy":
+                return dict(empty)
+            result = dict(empty)
+            result["error"] = str(e)
+            return result
+
     def check_transfer_acceleration(
         self, bucket_name: str, client
     ) -> Dict[str, Any]:

@@ -1,5 +1,6 @@
 """Tests for scanner module."""
 
+import json
 import unittest
 from unittest.mock import Mock, patch
 from moto import mock_aws
@@ -575,6 +576,91 @@ class TestS3SecurityScanner(unittest.TestCase):
         result = scanner.check_event_notifications('src', mock_client)
         self.assertFalse(result['has_external_notification'])
         self.assertTrue(result['has_notifications'])
+
+    def test_check_ssec_not_denied(self):
+        """A bucket policy without an SSE-C deny is flagged (Codefinger)."""
+        scanner = S3SecurityScanner(region='us-east-1')
+        mock_client = Mock()
+        mock_client.get_bucket_policy.return_value = {
+            'Policy': json.dumps({
+                'Version': '2012-10-17',
+                'Statement': [{
+                    'Sid': 'AllowReads', 'Effect': 'Allow',
+                    'Principal': {'AWS': 'arn:aws:iam::111111111111:root'},
+                    'Action': 's3:GetObject',
+                    'Resource': 'arn:aws:s3:::b/*',
+                }],
+            })
+        }
+        result = scanner.access_control_checker.check_ssec_protection(
+            'b', mock_client
+        )
+        self.assertFalse(result['denies_ssec'])
+
+    def test_check_ssec_denied(self):
+        """The AWS-recommended deny-SSE-C statement is recognized."""
+        scanner = S3SecurityScanner(region='us-east-1')
+        mock_client = Mock()
+        mock_client.get_bucket_policy.return_value = {
+            'Policy': json.dumps({
+                'Version': '2012-10-17',
+                'Statement': [{
+                    'Sid': 'DenySSEC', 'Effect': 'Deny', 'Principal': '*',
+                    'Action': 's3:PutObject', 'Resource': 'arn:aws:s3:::b/*',
+                    'Condition': {'Null': {
+                        's3:x-amz-server-side-encryption-customer-algorithm':
+                        'false'}},
+                }],
+            })
+        }
+        result = scanner.access_control_checker.check_ssec_protection(
+            'b', mock_client
+        )
+        self.assertTrue(result['denies_ssec'])
+
+    def test_check_access_point_delegation_flagged(self):
+        """A wildcard principal gated only on s3:DataAccessPointAccount."""
+        scanner = S3SecurityScanner(region='us-east-1')
+        mock_client = Mock()
+        mock_client.get_bucket_policy.return_value = {
+            'Policy': json.dumps({
+                'Version': '2012-10-17',
+                'Statement': [{
+                    'Sid': 'DelegateToAccessPoints', 'Effect': 'Allow',
+                    'Principal': '*', 'Action': 's3:*',
+                    'Resource': ['arn:aws:s3:::b', 'arn:aws:s3:::b/*'],
+                    'Condition': {'StringEquals': {
+                        's3:DataAccessPointAccount': '111111111111'}},
+                }],
+            })
+        }
+        result = (
+            scanner.access_control_checker.check_access_point_delegation(
+                'b', mock_client
+            )
+        )
+        self.assertTrue(result['delegates_to_access_points'])
+
+    def test_check_access_point_delegation_not_flagged(self):
+        """A normal scoped policy does not trip the delegation check."""
+        scanner = S3SecurityScanner(region='us-east-1')
+        mock_client = Mock()
+        mock_client.get_bucket_policy.return_value = {
+            'Policy': json.dumps({
+                'Version': '2012-10-17',
+                'Statement': [{
+                    'Sid': 'Reads', 'Effect': 'Allow',
+                    'Principal': {'AWS': 'arn:aws:iam::111111111111:root'},
+                    'Action': 's3:GetObject', 'Resource': 'arn:aws:s3:::b/*',
+                }],
+            })
+        }
+        result = (
+            scanner.access_control_checker.check_access_point_delegation(
+                'b', mock_client
+            )
+        )
+        self.assertFalse(result['delegates_to_access_points'])
 
     def test_check_transfer_acceleration(self):
         """Test checking S3 transfer acceleration."""

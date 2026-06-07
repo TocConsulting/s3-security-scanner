@@ -2,7 +2,7 @@ FROM python:3.11-slim
 
 LABEL maintainer="Toc Consulting <tarek@tocconsulting.fr>"
 LABEL description="AWS S3 security scanner with compliance mapping for CIS, PCI-DSS, HIPAA, SOC 2, ISO, and GDPR"
-LABEL version="1.0.3"
+LABEL version="1.0.4"
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1

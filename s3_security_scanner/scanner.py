@@ -495,6 +495,18 @@ class S3SecurityScanner:
         )
         checks.update(gdpr_checks)
 
+        # SSE-C ransomware (Codefinger) prevention + access-point delegation
+        checks["ssec_protection"] = (
+            self.access_control_checker.check_ssec_protection(
+                bucket_name, client
+            )
+        )
+        checks["access_point_delegation"] = (
+            self.access_control_checker.check_access_point_delegation(
+                bucket_name, client
+            )
+        )
+
         # AWS FSBP additional checks
         checks["access_points"] = (
             self.access_control_checker.check_access_points(
@@ -847,6 +859,53 @@ class S3SecurityScanner:
                         "s3:PutReplicationConfiguration to a designated "
                         "pipeline principal, and allow-list known-good "
                         "destinations with --trusted-account."
+                    ),
+                }
+            )
+
+        # SSE-C ransomware (Codefinger) prevention guardrail missing.
+        # A bucket whose policy does not deny SSE-C uploads can be re-encrypted
+        # in place by an attacker with PutObject, using a key only they hold.
+        if not checks["ssec_protection"].get("denies_ssec", False):
+            issues.append(
+                {
+                    "severity": "MEDIUM",
+                    "issue_type": "ssec_not_denied",
+                    "description": (
+                        "Bucket policy does not deny SSE-C uploads, so an "
+                        "attacker with s3:PutObject could re-encrypt objects "
+                        "with a key only they hold (Codefinger ransomware TTP)"
+                    ),
+                    "recommendation": (
+                        "Add a Deny on s3:PutObject when "
+                        "s3:x-amz-server-side-encryption-customer-algorithm is "
+                        "present (bucket policy or SCP), and enable versioning "
+                        "plus Object Lock so a re-encrypt can be rolled back."
+                    ),
+                }
+            )
+
+        # Access-point delegation bypass: the bucket trusts ANY access point in
+        # the account, so a principal who can create one reads straight through
+        # the restrictive bucket policy.
+        if checks["access_point_delegation"].get(
+            "delegates_to_access_points", False
+        ):
+            issues.append(
+                {
+                    "severity": "HIGH",
+                    "issue_type": "access_point_delegation",
+                    "description": (
+                        "Bucket policy delegates access to ANY access point in "
+                        "the account (wildcard principal gated only on "
+                        "s3:DataAccessPointAccount); a principal who can call "
+                        "s3:CreateAccessPoint bypasses the bucket policy"
+                    ),
+                    "recommendation": (
+                        "Constrain the delegation to specific access point "
+                        "ARNs (or add aws:PrincipalOrgID), and treat "
+                        "s3:CreateAccessPoint as a sensitive permission and "
+                        "restrict it."
                     ),
                 }
             )
