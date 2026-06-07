@@ -220,54 +220,85 @@ class AccessControlChecker:
                 }
 
     def check_event_notifications(
-        self, bucket_name: str, client
+        self,
+        bucket_name: str,
+        client,
+        account_id: str = None,
+        trusted_accounts=None,
     ) -> Dict[str, Any]:
-        """Check if bucket has event notifications configured."""
+        """Check bucket event-notification configuration.
+
+        Beyond reporting whether notifications exist, this detects targets
+        (SNS / SQS / Lambda) in a different AWS account. An attacker who can
+        call s3:PutBucketNotification can point a bucket's events at their own
+        queue or function and be tipped off (and receive object metadata) on
+        every upload - a persistence / exfiltration backdoor. Trusted
+        destination accounts can be allow-listed.
+        """
+        trusted = set(trusted_accounts or [])
+
+        def _account(arn):
+            parts = (arn or "").split(":")
+            return parts[4] if len(parts) > 4 and parts[4] else None
+
+        empty = {
+            "has_notifications": False,
+            "notification_count": 0,
+            "sns_topics": 0,
+            "sqs_queues": 0,
+            "lambda_functions": 0,
+            "eventbridge_enabled": False,
+            "targets": [],
+            "external_targets": [],
+            "has_external_notification": False,
+        }
         try:
             response = client.get_bucket_notification_configuration(
                 Bucket=bucket_name
             )
-
-            # Check for any type of notification configuration
-            has_notifications = bool(
-                response.get("TopicConfigurations", [])
-                or response.get("QueueConfigurations", [])
-                or response.get("LambdaConfigurations", [])
-                or response.get("EventBridgeConfiguration", {})
+            topics = response.get("TopicConfigurations", [])
+            queues = response.get("QueueConfigurations", [])
+            lambdas = response.get(
+                "LambdaFunctionConfigurations",
+                response.get("LambdaConfigurations", []),
             )
+            eb = response.get("EventBridgeConfiguration", {})
 
-            notification_count = (
-                len(response.get("TopicConfigurations", []))
-                + len(response.get("QueueConfigurations", []))
-                + len(response.get("LambdaConfigurations", []))
-            )
+            targets = []
+            for t in topics:
+                targets.append({"type": "sns", "arn": t.get("TopicArn", "")})
+            for q in queues:
+                targets.append({"type": "sqs", "arn": q.get("QueueArn", "")})
+            for la in lambdas:
+                targets.append(
+                    {"type": "lambda", "arn": la.get("LambdaFunctionArn", "")}
+                )
 
-            if response.get("EventBridgeConfiguration", {}):
-                notification_count += 1
+            external = []
+            for tg in targets:
+                a = _account(tg["arn"])
+                if a and account_id and a != account_id and a not in trusted:
+                    e = dict(tg)
+                    e["account"] = a
+                    external.append(e)
 
+            has = bool(topics or queues or lambdas or eb)
+            count = len(targets) + (1 if eb else 0)
             return {
-                "has_notifications": has_notifications,
-                "notification_count": notification_count,
-                "sns_topics": len(response.get("TopicConfigurations", [])),
-                "sqs_queues": len(response.get("QueueConfigurations", [])),
-                "lambda_functions": len(
-                    response.get("LambdaConfigurations", [])
-                ),
-                "eventbridge_enabled": bool(
-                    response.get("EventBridgeConfiguration", {})
-                ),
+                "has_notifications": has,
+                "notification_count": count,
+                "sns_topics": len(topics),
+                "sqs_queues": len(queues),
+                "lambda_functions": len(lambdas),
+                "eventbridge_enabled": bool(eb),
+                "targets": targets,
+                "external_targets": external,
+                "has_external_notification": len(external) > 0,
             }
 
         except ClientError:
-            # No notification configuration is not an error, just means none configured
-            return {
-                "has_notifications": False,
-                "notification_count": 0,
-                "sns_topics": 0,
-                "sqs_queues": 0,
-                "lambda_functions": 0,
-                "eventbridge_enabled": False,
-            }
+            # No notification configuration is not an error, just means none
+            return dict(empty)
 
     def check_replication(
         self,

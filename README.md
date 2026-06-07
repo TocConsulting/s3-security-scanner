@@ -222,8 +222,8 @@ Run the scanner using Docker without installing Python dependencies locally.
 # Pull the latest version
 docker pull tarekcheikh/s3-security-scanner:latest
 
-# Or pull a specific version
-docker pull tarekcheikh/s3-security-scanner:1.0.1
+# Or pin a specific version (replace X.Y.Z with the release you want)
+docker pull tarekcheikh/s3-security-scanner:X.Y.Z
 ```
 
 ### Basic Docker Commands
@@ -396,6 +396,7 @@ docker run --rm \
 | **Event Notifications** | Checks for SNS/SQS/Lambda notification configuration | LOW |
 | **Cross-Region Replication** | Validates replication configuration for disaster recovery | MEDIUM |
 | **External-Account Replication** | Flags replication to a different AWS account (data-exfiltration backdoor); allow-list with `--trusted-account` | CRITICAL |
+| **External-Account Notification** | Flags event notifications (SQS/SNS/Lambda) targeting a different AWS account (exfiltration/persistence backdoor); allow-list with `--trusted-account` | CRITICAL |
 | **Transfer Acceleration** | Checks S3 Transfer Acceleration configuration | LOW |
 | **Cross-Account Access** | Identifies cross-account principals in bucket policies | MEDIUM |
 | **MFA Requirements** | Validates MFA conditions in bucket policies | HIGH |

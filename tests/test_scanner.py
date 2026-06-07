@@ -544,6 +544,38 @@ class TestS3SecurityScanner(unittest.TestCase):
         self.assertFalse(result['has_external_replication'])
         self.assertTrue(result['has_replication'])
 
+    def test_check_notification_external_account(self):
+        """Notification target in another account is flagged (hijack)."""
+        scanner = S3SecurityScanner(region='us-east-1')
+        scanner.account_id = '111111111111'
+        scanner.trusted_accounts = set()
+        mock_client = Mock()
+        mock_client.get_bucket_notification_configuration.return_value = {
+            'QueueConfigurations': [
+                {'QueueArn': 'arn:aws:sqs:us-east-1:999999999999:attacker'}
+            ]
+        }
+        result = scanner.check_event_notifications('victim', mock_client)
+        self.assertTrue(result['has_external_notification'])
+        self.assertEqual(
+            result['external_targets'][0]['account'], '999999999999'
+        )
+
+    def test_check_notification_same_account_not_flagged(self):
+        """Notification target in the same account is not flagged."""
+        scanner = S3SecurityScanner(region='us-east-1')
+        scanner.account_id = '111111111111'
+        scanner.trusted_accounts = set()
+        mock_client = Mock()
+        mock_client.get_bucket_notification_configuration.return_value = {
+            'QueueConfigurations': [
+                {'QueueArn': 'arn:aws:sqs:us-east-1:111111111111:ours'}
+            ]
+        }
+        result = scanner.check_event_notifications('src', mock_client)
+        self.assertFalse(result['has_external_notification'])
+        self.assertTrue(result['has_notifications'])
+
     def test_check_transfer_acceleration(self):
         """Test checking S3 transfer acceleration."""
         scanner = S3SecurityScanner(region='us-east-1')

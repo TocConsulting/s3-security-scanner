@@ -279,7 +279,7 @@ class S3SecurityScanner:
     ) -> Dict[str, Any]:
         """Check if bucket has event notifications configured."""
         return self.access_control_checker.check_event_notifications(
-            bucket_name, client
+            bucket_name, client, self.account_id, self.trusted_accounts
         )
 
     def check_replication(self, bucket_name: str, client) -> Dict[str, Any]:
@@ -770,6 +770,36 @@ class S3SecurityScanner:
                     "description": "No event notifications configured",
                     "recommendation": (
                         "Consider enabling event notifications for security monitoring"
+                    ),
+                }
+            )
+
+        # Notification target in an external account = exfiltration/persistence
+        # backdoor (S3 tips off the attacker on every upload).
+        if checks["event_notifications"].get(
+            "has_external_notification", False
+        ):
+            ext = checks["event_notifications"].get("external_targets", [])
+            dests = ", ".join(
+                f"{t.get('type')}:{t.get('arn')} (account {t.get('account')})"
+                for t in ext
+            )
+            issues.append(
+                {
+                    "severity": "CRITICAL",
+                    "issue_type": "external_account_notification",
+                    "description": (
+                        "Bucket sends event notifications to an external AWS "
+                        "account (potential exfiltration/persistence "
+                        "backdoor): " + dests
+                    ),
+                    "recommendation": (
+                        "Verify the notification target is trusted. If "
+                        "unexpected, remove it "
+                        "(aws s3api put-bucket-notification-configuration with "
+                        "an empty config) and restrict "
+                        "s3:PutBucketNotification. Allow-list known-good "
+                        "destination accounts with --trusted-account."
                     ),
                 }
             )

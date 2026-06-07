@@ -124,6 +124,12 @@ def calculate_security_score(checks: Dict[str, Any]) -> int:
     if get_check_result("replication", "has_external_replication", False):
         score -= 20
 
+    # Notification target in an external account is an exfil/persistence backdoor
+    if get_check_result(
+        "event_notifications", "has_external_notification", False
+    ):
+        score -= 20
+
     # Ensure score doesn't go below 0
     return max(0, score)
 
