@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>S3 Security Scanner Report - {{ summary.region }}</title>
+    <style>
+        :root {
+            --primary-color: #2563eb;
+            --success-color: #059669;
+            --warning-color: #d97706;
+            --danger-color: #dc2626;
+            --info-color: #0891b2;
+            --dark-color: #1f2937;
+            --light-color: #f8fafc;
+            --border-color: #e5e7eb;
+            --text-primary: #111827;
+            --text-secondary: #6b7280;
+            --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            line-height: 1.6;
+            color: var(--text-primary);
+            background-color: #f1f5f9;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1e40af 100%);
+            color: white;
+            padding: 2rem 0;
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .header-content {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-meta {
+            text-align: right;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            margin-bottom: 2rem;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .card-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--light-color);
+        }
+
+        .card-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .card-body {
+            padding: 1.5rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-card.danger .stat-number { color: var(--danger-color); }
+        .stat-card.warning .stat-number { color: var(--warning-color); }
+        .stat-card.success .stat-number { color: var(--success-color); }
+        .stat-card.info .stat-number { color: var(--info-color); }
+        .stat-card.primary .stat-number { color: var(--primary-color); }
+
+        .simple-charts {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .chart-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .chart-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+            color: var(--text-primary);
+        }
+
+        .simple-bar-chart {
+            margin: 1rem 0;
+        }
+
+        .bar-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .bar-label {
+            min-width: 100px;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+        }
+
+        .bar-container {
+            flex: 1;
+            height: 20px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            margin: 0 0.5rem;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+
+        .bar-value {
+            min-width: 40px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        .progress-ring {
+            width: 120px;
+            height: 120px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .progress-ring svg {
+            width: 120px;
+            height: 120px;
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring circle {
+            fill: transparent;
+            stroke-width: 8;
+        }
+
+        .progress-ring .bg {
+            stroke: #e5e7eb;
+        }
+
+        .progress-ring .progress {
+            stroke-linecap: round;
+            transition: stroke-dasharray 0.5s ease;
+        }
+
+        .progress-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        /* Compliance Grid Layout */
+        .compliance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 1rem;
+            padding: 1rem 0;
+        }
+
+        .compliance-item {
+            text-align: center;
+        }
+
+        .compliance-framework-name {
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .progress-ring-small {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        .progress-ring-small svg {
+            width: 60px;
+            height: 60px;
+            transform: rotate(-90deg);
+        }
+
+        .progress-ring-small circle {
+            fill: transparent;
+        }
+
+        .progress-ring-small circle.bg {
+            stroke: #e5e7eb;
+        }
+
+        .progress-ring-small circle.progress {
+            transition: stroke-dasharray 0.5s ease;
+        }
+
+        .progress-text-small {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .table-container {
+            overflow-x: auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .table th {
+            background: var(--light-color);
+            padding: 1rem;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        .table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .severity-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .severity-high { background: #fef2f2; color: var(--danger-color); }
+        .severity-medium { background: #fef3c7; color: var(--warning-color); }
+        .severity-low { background: #dbeafe; color: var(--primary-color); }
+        .severity-info { background: #ecfeff; color: var(--info-color); }
+
+        .compliance-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .compliance-excellent { background: #dcfce7; color: var(--success-color); }
+        .compliance-good { background: #fef3c7; color: var(--warning-color); }
+        .compliance-poor { background: #fef2f2; color: var(--danger-color); }
+
+        .score-bar {
+            width: 100%;
+            height: 20px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .score-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+
+        .score-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+
+        .bucket-name {
+            font-weight: 600;
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .bucket-name:hover {
+            text-decoration: underline;
+        }
+
+        .clickable-bucket {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .clickable-bucket:hover {
+            color: #1d4ed8;
+            transform: scale(1.02);
+        }
+
+        /* Export Buttons Styles */
+        .export-buttons {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+        }
+
+        .export-btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.875rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .csv-btn {
+            background: linear-gradient(135deg, #059669 0%, #047857 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+        }
+
+        .csv-btn:hover {
+            background: linear-gradient(135deg, #047857 0%, #065f46 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
+        }
+
+        .json-btn {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
+        }
+
+        .json-btn:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+        }
+
+        .export-btn:active {
+            transform: translateY(0);
+        }
+
+        .public-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .public-yes {
+            background: #fef2f2;
+            color: var(--danger-color);
+        }
+
+        .public-no {
+            background: #dcfce7;
+            color: var(--success-color);
+        }
+
+        .issues-list {
+            max-height: 100px;
+            overflow-y: auto;
+            font-size: 0.75rem;
+        }
+
+        .issue-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            margin-bottom: 0.25rem;
+            padding: 0.25rem;
+            border-radius: 4px;
+            background: #f8fafc;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            border-top: 1px solid var(--border-color);
+            margin-top: 2rem;
+        }
+
+        .footer a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .tab {
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .filter-controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            min-width: 200px;
+        }
+
+        .filter-select {
+            padding: 0.5rem 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 0.875rem;
+            background: white;
+            cursor: pointer;
+        }
+
+        .alert {
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1rem;
+            border-left: 4px solid;
+        }
+
+        .alert-danger {
+            background: #fef2f2;
+            border-color: var(--danger-color);
+            color: #7f1d1d;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            border-color: var(--warning-color);
+            color: #78350f;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            border-color: var(--primary-color);
+            color: #1e3a8a;
+        }
+
+        @media (max-width: 768px) {
+            .header-content {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .header h1 {
+                font-size: 2rem;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            }
+
+            .simple-charts {
+                grid-template-columns: 1fr;
+            }
+
+            .filter-controls {
+                flex-direction: column;
+            }
+
+            .filter-input, .filter-select {
+                min-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div>
+                <h1>
+                    🛡️ S3 Security Scanner Report
+                </h1>
+                <p>Comprehensive security analysis for AWS S3 buckets</p>
+            </div>
+            <div class="header-meta">
+                <div><strong>Region:</strong> {{ summary.region }}</div>
+                <div><strong>Account:</strong> {{ summary.account_id }}</div>
+                <div><strong>Scan Time:</strong> {{ summary.scan_time }}</div>
+                <div><strong>Total Buckets:</strong> {{ summary.total_buckets }}</div>
+                
+                <!-- Export Buttons -->
+                <div class="export-buttons" style="margin-top: 1rem;">
+                    <button onclick="exportToCSV()" class="export-btn csv-btn">
+                        📊 Export CSV
+                    </button>
+                    <button onclick="exportToJSON()" class="export-btn json-btn">
+                        📄 Export JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Executive Summary -->
+        <div class="stats-grid">
+            <div class="stat-card primary">
+                <div class="stat-number">{{ summary.total_buckets }}</div>
+                <div class="stat-label">Total Buckets</div>
+            </div>
+            <div class="stat-card danger">
+                <div class="stat-number">{{ summary.public_buckets }}</div>
+                <div class="stat-label">Public Buckets</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="stat-number">{{ summary.high_severity_buckets }}</div>
+                <div class="stat-label">High Severity Issues</div>
+            </div>
+            <div class="stat-card info">
+                <div class="stat-number">{{ "%.1f"|format(summary.average_security_score) }}</div>
+                <div class="stat-label">Avg Security Score</div>
+            </div>
+            <div class="stat-card success">
+                <div class="stat-number">{{ summary.total_objects_scanned or 0 }}</div>
+                <div class="stat-label">Objects Scanned</div>
+            </div>
+            <div class="stat-card danger">
+                <div class="stat-number">{{ summary.total_sensitive_objects or 0 }}</div>
+                <div class="stat-label">Sensitive Objects</div>
+            </div>
+        </div>
+
+        <!-- Simple Visual Charts -->
+        <div class="simple-charts">
+            <div class="chart-card">
+                <div class="chart-title">Security Score Distribution</div>
+                <div class="simple-bar-chart">
+                    {% set score_data = security_score_distribution %}
+                    {% set score_labels = ['0-20', '21-40', '41-60', '61-80', '81-100'] %}
+                    {% set score_colors = ['#dc2626', '#ea580c', '#d97706', '#059669', '#16a34a'] %}
+                    {% for i in range(5) %}
+                    <div class="bar-item">
+                        <div class="bar-label">{{ score_labels[i] }}</div>
+                        <div class="bar-container">
+                            <div class="bar-fill" style="width: {{ (score_data[i] / summary.total_buckets * 100) if summary.total_buckets > 0 else 0 }}%; background-color: {{ score_colors[i] }};"></div>
+                        </div>
+                        <div class="bar-value">{{ score_data[i] }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">Compliance Framework Status</div>
+                <div class="compliance-grid">
+                    {% for framework, percentage in zip(compliance_labels, compliance_percentages) %}
+                    <div class="compliance-item">
+                        <div class="compliance-framework-name">{{ framework }}</div>
+                        <div class="progress-ring-small">
+                            <svg width="60" height="60">
+                                <circle class="bg" cx="30" cy="30" r="25" stroke-width="5"></circle>
+                                <circle class="progress" cx="30" cy="30" r="25" stroke-width="5" 
+                                    stroke="{% if percentage >= 90 %}#059669{% elif percentage >= 75 %}#d97706{% else %}#dc2626{% endif %}"
+                                    stroke-dasharray="{{ (percentage / 100 * 157.08)|round(1) }} 157.08"></circle>
+                            </svg>
+                            <div class="progress-text-small">{{ "%.0f"|format(percentage) }}%</div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">Issues by Severity</div>
+                <div class="simple-bar-chart">
+                    {% set severity_data = severity_counts %}
+                    {% set severity_labels = ['High', 'Medium', 'Low', 'Info'] %}
+                    {% set severity_colors = ['#dc2626', '#d97706', '#2563eb', '#059669'] %}
+                    {% set max_issues = severity_data|max if severity_data else 1 %}
+                    {% for i in range(4) %}
+                    <div class="bar-item">
+                        <div class="bar-label">{{ severity_labels[i] }}</div>
+                        <div class="bar-container">
+                            <div class="bar-fill" style="width: {{ (severity_data[i] / max_issues * 100) if max_issues > 0 else 0 }}%; background-color: {{ severity_colors[i] }};"></div>
+                        </div>
+                        <div class="bar-value">{{ severity_data[i] }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <div class="chart-card">
+                <div class="chart-title">Security Features Adoption</div>
+                <div class="simple-bar-chart">
+                    {% set feature_data = feature_adoption %}
+                    {% set feature_labels = ['Encryption', 'Versioning', 'Logging', 'Public Block', 'MFA Delete'] %}
+                    {% for i in range(5) %}
+                    <div class="bar-item">
+                        <div class="bar-label">{{ feature_labels[i] }}</div>
+                        <div class="bar-container">
+                            <div class="bar-fill" style="width: {{ feature_data[i] }}%; background-color: {% if feature_data[i] >= 80 %}#059669{% elif feature_data[i] >= 60 %}#d97706{% else %}#dc2626{% endif %};"></div>
+                        </div>
+                        <div class="bar-value">{{ "%.0f"|format(feature_data[i]) }}%</div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Alerts Section -->
+        {% if summary.public_buckets > 0 %}
+        <div class="alert alert-danger">
+            <strong>🚨 Critical:</strong> {{ summary.public_buckets }} bucket(s) are publicly accessible. This poses a significant security risk and should be addressed immediately.
+        </div>
+        {% endif %}
+
+        {% if summary.high_severity_buckets > 0 %}
+        <div class="alert alert-warning">
+            <strong>⚠️ Warning:</strong> {{ summary.high_severity_buckets }} bucket(s) have high severity security issues requiring attention.
+        </div>
+        {% endif %}
+
+        <!-- Detailed Results -->
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">
+                    📋 Detailed Bucket Analysis
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Tabs -->
+                <div class="tabs">
+                    <div class="tab active" onclick="showTab(event, 'buckets-tab')">
+                        🗃️ Buckets Overview
+                    </div>
+                    <div class="tab" onclick="showTab(event, 'compliance-tab')">
+                        ✅ Compliance Details
+                    </div>
+                    <div class="tab" onclick="showTab(event, 'issues-tab')">
+                        ⚠️ Security Issues
+                    </div>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="filter-controls">
+                    <input type="text" id="bucketFilter" class="filter-input" placeholder="Filter by bucket name..." onkeyup="filterTable()">
+                    <select id="severityFilter" class="filter-select" onchange="filterTable()">
+                        <option value="">All Severity Levels</option>
+                        <option value="HIGH">High Severity</option>
+                        <option value="MEDIUM">Medium Severity</option>
+                        <option value="LOW">Low Severity</option>
+                    </select>
+                    <select id="publicFilter" class="filter-select" onchange="filterTable()">
+                        <option value="">All Buckets</option>
+                        <option value="public">Public Only</option>
+                        <option value="private">Private Only</option>
+                    </select>
+                </div>
+
+                <!-- Buckets Tab -->
+                <div id="buckets-tab" class="tab-content active">
+                    <div class="table-container">
+                        <table class="table" id="bucketsTable">
+                            <thead>
+                                <tr>
+                                    <th>Bucket Name</th>
+                                    <th>Region</th>
+                                    <th>Security Score</th>
+                                    <th>Public Access</th>
+                                    <th>Encryption</th>
+                                    <th>Versioning</th>
+                                    <th>Logging</th>
+                                    <th>Issues</th>
+                                    <th>Compliance</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bucket in results %}
+                                <tr data-bucket-name="{{ bucket.bucket_name }}" data-public="{{ 'public' if bucket.is_public else 'private' }}" data-severity="{{ 'HIGH' if bucket.has_high_severity else ('MEDIUM' if bucket.has_medium_severity else 'LOW') }}">
+                                    <td>
+                                        <span class="bucket-name clickable-bucket" onclick="showBucketDetails('{{ bucket.bucket_name }}')">{{ bucket.bucket_name }}</span>
+                                        {% if bucket.creation_date %}
+                                        <br><small style="color: var(--text-secondary);">Created: {{ bucket.creation_date.strftime('%Y-%m-%d') if bucket.creation_date else 'Unknown' }}</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ bucket.region or 'Unknown' }}</td>
+                                    <td>
+                                        <div class="score-bar">
+                                            <div class="score-fill" style="width: {{ bucket.security_score or 0 }}%; background: {% if bucket.security_score >= 80 %}var(--success-color){% elif bucket.security_score >= 60 %}var(--warning-color){% else %}var(--danger-color){% endif %};"></div>
+                                            <div class="score-text">{{ bucket.security_score or 0 }}/100</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="public-indicator {{ 'public-yes' if bucket.is_public else 'public-no' }}">
+                                            {{ '🔓 Public' if bucket.is_public else '🔒 Private' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="compliance-badge {{ 'compliance-excellent' if bucket.encryption.is_enabled else 'compliance-poor' }}">
+                                            {{ '🛡️ Enabled' if bucket.encryption.is_enabled else '⚠️ Disabled' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="compliance-badge {{ 'compliance-excellent' if bucket.versioning.is_enabled else 'compliance-poor' }}">
+                                            {{ '📋 Enabled' if bucket.versioning.is_enabled else '❌ Disabled' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="compliance-badge {{ 'compliance-excellent' if bucket.logging.is_enabled else 'compliance-poor' }}">
+                                            {{ '📝 Enabled' if bucket.logging.is_enabled else '❌ Disabled' }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="issues-list">
+                                            {% for issue in bucket.issues[:3] %}
+                                            <div class="issue-item">
+                                                <span class="severity-badge severity-{{ issue.severity.lower() }}">
+                                                    {{ issue.severity }}
+                                                </span>
+                                                <span>{{ issue.description }}</span>
+                                            </div>
+                                            {% endfor %}
+                                            {% if bucket.issues|length > 3 %}
+                                            <div class="hidden-issues" id="hidden-issues-{{ loop.index }}" style="display: none;">
+                                                {% for issue in bucket.issues[3:] %}
+                                                <div class="issue-item">
+                                                    <span class="severity-badge severity-{{ issue.severity.lower() }}">
+                                                        {{ issue.severity }}
+                                                    </span>
+                                                    <span>{{ issue.description }}</span>
+                                                </div>
+                                                {% endfor %}
+                                            </div>
+                                            <small style="color: var(--primary-color); cursor: pointer; text-decoration: underline;" 
+                                                   onclick="toggleMoreIssues({{ loop.index }})">
+                                                +{{ bucket.issues|length - 3 }} more issues
+                                            </small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% set compliance = bucket.compliance_status %}
+                                        <div style="font-size: 0.75rem;">
+                                            {% if compliance.CIS %}
+                                            <div>CIS: {{ "%.0f"|format(compliance.CIS.compliance_percentage) }}%</div>
+                                            {% endif %}
+                                            {% if compliance['AWS-FSBP'] %}
+                                            <div>AWS-FSBP: {{ "%.0f"|format(compliance['AWS-FSBP'].compliance_percentage) }}%</div>
+                                            {% endif %}
+                                            {% if compliance['PCI-DSS'] %}
+                                            <div>PCI: {{ "%.0f"|format(compliance['PCI-DSS'].compliance_percentage) }}%</div>
+                                            {% endif %}
+                                            {% if compliance.HIPAA %}
+                                            <div>HIPAA: {{ "%.0f"|format(compliance.HIPAA.compliance_percentage) }}%</div>
+                                            {% endif %}
+                                            {% if compliance.SOC2 %}
+                                            <div>SOC2: {{ "%.0f"|format(compliance.SOC2.compliance_percentage) }}%</div>
+                                            {% endif %}
+                                            {% if compliance.ISO27001 %}
+                                            <div>ISO27001: {{ "%.0f"|format(compliance.ISO27001.compliance_percentage) }}%</div>
+                                            {% endif %}
+                                            {% if compliance.ISO27017 %}
+                                            <div>ISO27017: {{ "%.0f"|format(compliance.ISO27017.compliance_percentage) }}%</div>
+                                            {% endif %}
+                                            {% if compliance.ISO27018 %}
+                                            <div>ISO27018: {{ "%.0f"|format(compliance.ISO27018.compliance_percentage) }}%</div>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Compliance Tab -->
+                <div id="compliance-tab" class="tab-content">
+                    <div class="filter-section" style="margin-bottom: 1rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <input type="text" id="compliance-search" placeholder="Filter by framework name..." 
+                                       style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.875rem;"
+                                       onkeyup="filterComplianceTable()">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Framework</th>
+                                    <th>Compliant Buckets</th>
+                                    <th>Total Buckets</th>
+                                    <th>Compliance Rate</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for framework, stats in compliance_summary.items() %}
+                                <tr data-framework="{{ framework.lower() }}">
+                                    <td><strong>{{ framework }}</strong></td>
+                                    <td>{{ stats.compliant_buckets }}</td>
+                                    <td>{{ stats.total_buckets }}</td>
+                                    <td>
+                                        {% set percentage = stats.average_compliance_percentage if 'average_compliance_percentage' in stats else stats.compliance_percentage %}
+                                        <div class="score-bar">
+                                            <div class="score-fill" style="width: {{ percentage }}%; background: {% if percentage >= 90 %}var(--success-color){% elif percentage >= 75 %}var(--warning-color){% else %}var(--danger-color){% endif %};"></div>
+                                            <div class="score-text">{{ "%.1f"|format(percentage) }}%</div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% set percentage = (stats.compliant_buckets / stats.total_buckets * 100) if stats.total_buckets > 0 else 0 %}
+                                        <span class="compliance-badge {% if percentage >= 90 %}compliance-excellent{% elif percentage >= 75 %}compliance-good{% else %}compliance-poor{% endif %}">
+                                            {% if percentage >= 90 %}
+                                                ✅ Excellent
+                                            {% elif percentage >= 75 %}
+                                                ⚠️ Good
+                                            {% else %}
+                                                ❌ Needs Work
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Issues Tab -->
+                <div id="issues-tab" class="tab-content">
+                    <div class="filter-section" style="margin-bottom: 1rem;">
+                        <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 200px;">
+                                <input type="text" id="issues-bucket-search" placeholder="Filter by bucket name..." 
+                                       style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.875rem;"
+                                       onkeyup="filterIssuesTable()">
+                            </div>
+                            <div style="min-width: 150px;">
+                                <select id="issues-severity-filter" 
+                                        style="width: 100%; padding: 0.5rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 0.875rem;"
+                                        onchange="filterIssuesTable()">
+                                    <option value="">All Severities</option>
+                                    <option value="HIGH">High</option>
+                                    <option value="MEDIUM">Medium</option>
+                                    <option value="LOW">Low</option>
+                                    <option value="INFO">Info</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Bucket</th>
+                                    <th style="cursor: pointer;" onclick="sortIssuesBySeverity()">
+                                        Severity 
+                                        <span id="severity-sort-indicator" style="margin-left: 5px;">⬆⬇</span>
+                                    </th>
+                                    <th>Issue Type</th>
+                                    <th>Description</th>
+                                    <th>Recommendation</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for bucket in results %}
+                                    {% for issue in bucket.issues %}
+                                    <tr data-bucket-name="{{ bucket.bucket_name.lower() }}" data-severity="{{ issue.severity }}" data-severity-order="{{ {'HIGH': 1, 'MEDIUM': 2, 'LOW': 3, 'INFO': 4}.get(issue.severity, 5) }}">
+                                        <td><span class="bucket-name clickable-bucket" onclick="showBucketDetails('{{ bucket.bucket_name }}')">{{ bucket.bucket_name }}</span></td>
+                                        <td>
+                                            <span class="severity-badge severity-{{ issue.severity.lower() }}">
+                                                {{ '🚨' if issue.severity == 'HIGH' else ('⚠️' if issue.severity == 'MEDIUM' else 'ℹ️') }}
+                                                {{ issue.severity }}
+                                            </span>
+                                        </td>
+                                        <td><code>{{ issue.issue_type }}</code></td>
+                                        <td>{{ issue.description }}</td>
+                                        <td style="font-size: 0.75rem;">{{ issue.recommendation }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Generated by <strong>S3 Security Scanner</strong> v1.0.0 - Enhanced with ISO 27001/27017/27018 Compliance</p>
+        <p>This report is for security assessment purposes only. Ensure proper authorization before making changes.</p>
+    </div>
+
+    <script>
+        // Simple tab functionality
+        function showTab(evt, tabName) {
+            var i, tabcontent, tabs;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].classList.remove("active");
+            }
+            tabs = document.getElementsByClassName("tab");
+            for (i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove("active");
+            }
+            document.getElementById(tabName).classList.add("active");
+            evt.currentTarget.classList.add("active");
+        }
+
+        // Simple table filtering
+        function filterTable() {
+            const bucketFilter = document.getElementById('bucketFilter').value.toLowerCase();
+            const severityFilter = document.getElementById('severityFilter').value;
+            const publicFilter = document.getElementById('publicFilter').value;
+            
+            const table = document.getElementById('bucketsTable');
+            if (!table) return;
+            
+            const rows = table.getElementsByTagName('tr');
+            
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const bucketName = row.dataset.bucketName?.toLowerCase() || '';
+                const severity = row.dataset.severity || '';
+                const publicStatus = row.dataset.public || '';
+                
+                let showRow = true;
+                
+                if (bucketFilter && !bucketName.includes(bucketFilter)) {
+                    showRow = false;
+                }
+                
+                if (severityFilter && severity !== severityFilter) {
+                    showRow = false;
+                }
+                
+                if (publicFilter && publicStatus !== publicFilter) {
+                    showRow = false;
+                }
+                
+                row.style.display = showRow ? '' : 'none';
+            }
+        }
+
+        // Toggle more issues functionality
+        function toggleMoreIssues(rowIndex) {
+            const hiddenIssues = document.getElementById('hidden-issues-' + rowIndex);
+            const toggleLink = event.target;
+            
+            if (hiddenIssues.style.display === 'none') {
+                hiddenIssues.style.display = 'block';
+                toggleLink.innerHTML = toggleLink.innerHTML.replace('+', '- Hide ').replace(' more issues', ' additional issues');
+            } else {
+                hiddenIssues.style.display = 'none';
+                toggleLink.innerHTML = toggleLink.innerHTML.replace('- Hide ', '+').replace(' additional issues', ' more issues');
+            }
+        }
+
+        // Show bucket details functionality
+        function showBucketDetails(bucketName) {
+            // Switch to issues tab and filter by bucket
+            showTab({currentTarget: document.querySelector('[onclick="showTab(event, \'issues-tab\')"]')}, 'issues-tab');
+            
+            // Set the bucket filter in issues tab
+            const issuesFilter = document.getElementById('issues-bucket-search');
+            if (issuesFilter) {
+                issuesFilter.value = bucketName;
+                filterIssuesTable();
+            }
+        }
+
+        // Filter compliance table by framework
+        function filterComplianceTable() {
+            const filter = document.getElementById('compliance-search').value.toLowerCase();
+            const table = document.querySelector('#compliance-tab .table');
+            if (!table) return;
+            
+            const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const framework = row.dataset.framework || '';
+                
+                if (framework.includes(filter)) {
+                    row.style.display = '';
+                } else {
+                    row.style.display = 'none';
+                }
+            }
+        }
+
+        // Filter issues table by bucket name and severity
+        function filterIssuesTable() {
+            const bucketFilter = document.getElementById('issues-bucket-search').value.toLowerCase();
+            const severityFilter = document.getElementById('issues-severity-filter').value;
+            const table = document.querySelector('#issues-tab .table');
+            if (!table) return;
+            
+            const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+            
+            for (let i = 0; i < rows.length; i++) {
+                const row = rows[i];
+                const bucketName = row.dataset.bucketName || '';
+                const severity = row.dataset.severity || '';
+                
+                let showRow = true;
+                
+                if (bucketFilter && !bucketName.includes(bucketFilter)) {
+                    showRow = false;
+                }
+                
+                if (severityFilter && severity !== severityFilter) {
+                    showRow = false;
+                }
+                
+                row.style.display = showRow ? '' : 'none';
+            }
+        }
+
+        // Sort issues table by severity
+        let severitySortDirection = 'asc';
+        function sortIssuesBySeverity() {
+            const table = document.querySelector('#issues-tab .table tbody');
+            if (!table) return;
+            
+            const rows = Array.from(table.getElementsByTagName('tr'));
+            
+            rows.sort((a, b) => {
+                const orderA = parseInt(a.dataset.severityOrder) || 999;
+                const orderB = parseInt(b.dataset.severityOrder) || 999;
+                
+                if (severitySortDirection === 'asc') {
+                    return orderA - orderB;
+                } else {
+                    return orderB - orderA;
+                }
+            });
+            
+            // Clear table and re-append sorted rows
+            while (table.firstChild) {
+                table.removeChild(table.firstChild);
+            }
+            
+            rows.forEach(row => table.appendChild(row));
+            
+            // Update sort indicator
+            const indicator = document.getElementById('severity-sort-indicator');
+            if (indicator) {
+                indicator.textContent = severitySortDirection === 'asc' ? '⬆' : '⬇';
+            }
+            
+            // Toggle direction for next sort
+            severitySortDirection = severitySortDirection === 'asc' ? 'desc' : 'asc';
+        }
+
+        // Export functionality
+        function exportToCSV() {
+            const data = collectScanData();
+            const csvContent = convertToCSV(data);
+            downloadFile(csvContent, `s3_security_scan_${data.summary.region}_${formatTimestamp()}.csv`, 'text/csv');
+        }
+
+        function exportToJSON() {
+            const data = collectScanData();
+            const jsonContent = JSON.stringify(data, null, 2);
+            downloadFile(jsonContent, `s3_security_scan_${data.summary.region}_${formatTimestamp()}.json`, 'application/json');
+        }
+
+        function collectScanData() {
+            // Extract summary data from the HTML
+            const summary = {
+                scan_time: new Date().toISOString(),
+                region: "{{ summary.region }}",
+                account_id: "{{ summary.account_id }}",
+                total_buckets: {{ summary.total_buckets }},
+                error_buckets: {{ summary.error_buckets or 0 }},
+                public_buckets: {{ summary.public_buckets }},
+                high_severity_buckets: {{ summary.high_severity_buckets }},
+                medium_severity_buckets: {{ summary.medium_severity_buckets }},
+                average_security_score: {{ summary.average_security_score }},
+                total_public_objects: {{ summary.total_public_objects or 0 }},
+                total_sensitive_objects: {{ summary.total_sensitive_objects or 0 }}
+            };
+
+            // Extract bucket data from the table
+            const results = [];
+            {% for bucket in results %}
+            results.push({
+                bucket_name: "{{ bucket.bucket_name }}",
+                region: "{{ bucket.region or 'Unknown' }}",
+                creation_date: "{{ bucket.creation_date.strftime('%Y-%m-%d') if bucket.creation_date else 'Unknown' }}",
+                security_score: {{ bucket.security_score or 0 }},
+                is_public: {{ 'true' if bucket.is_public else 'false' }},
+                encryption: {
+                    is_enabled: {{ 'true' if bucket.encryption.is_enabled else 'false' }}
+                },
+                versioning: {
+                    is_enabled: {{ 'true' if bucket.versioning.is_enabled else 'false' }}
+                },
+                logging: {
+                    is_enabled: {{ 'true' if bucket.logging.is_enabled else 'false' }}
+                },
+                issues: [
+                    {% for issue in bucket.issues %}
+                    {
+                        severity: "{{ issue.severity }}",
+                        issue_type: "{{ issue.issue_type }}",
+                        description: "{{ issue.description }}",
+                        recommendation: "{{ issue.recommendation }}"
+                    }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                compliance_status: {
+                    {% for framework, status in bucket.compliance_status.items() %}
+                    "{{ framework }}": {
+                        is_compliant: {{ 'true' if status.is_compliant else 'false' }},
+                        compliance_percentage: {{ status.compliance_percentage }}
+                    }{% if not loop.last %},{% endif %}
+                    {% endfor %}
+                }
+            });
+            {% endfor %}
+
+            return { summary: summary, results: results };
+        }
+
+        function convertToCSV(data) {
+            const headers = [
+                'Bucket Name', 'Region', 'Creation Date', 'Security Score', 'Is Public', 
+                'Encryption Enabled', 'Versioning Enabled', 'Logging Enabled', 
+                'High Severity Issues', 'Medium Severity Issues', 'Low Severity Issues',
+                'CIS Compliance %', 'PCI-DSS Compliance %', 'HIPAA Compliance %', 
+                'SOC2 Compliance %', 'ISO27001 Compliance %', 'GDPR Compliance %'
+            ];
+
+            const csvRows = [headers.join(',')];
+
+            data.results.forEach(bucket => {
+                const highIssues = bucket.issues.filter(i => i.severity === 'HIGH').length;
+                const mediumIssues = bucket.issues.filter(i => i.severity === 'MEDIUM').length;
+                const lowIssues = bucket.issues.filter(i => i.severity === 'LOW').length;
+
+                const row = [
+                    escapeCSV(bucket.bucket_name),
+                    escapeCSV(bucket.region),
+                    escapeCSV(bucket.creation_date),
+                    bucket.security_score,
+                    bucket.is_public ? 'Yes' : 'No',
+                    bucket.encryption.is_enabled ? 'Yes' : 'No',
+                    bucket.versioning.is_enabled ? 'Yes' : 'No',
+                    bucket.logging.is_enabled ? 'Yes' : 'No',
+                    highIssues,
+                    mediumIssues,
+                    lowIssues,
+                    bucket.compliance_status.CIS ? bucket.compliance_status.CIS.compliance_percentage : 'N/A',
+                    bucket.compliance_status['PCI-DSS'] ? bucket.compliance_status['PCI-DSS'].compliance_percentage : 'N/A',
+                    bucket.compliance_status.HIPAA ? bucket.compliance_status.HIPAA.compliance_percentage : 'N/A',
+                    bucket.compliance_status.SOC2 ? bucket.compliance_status.SOC2.compliance_percentage : 'N/A',
+                    bucket.compliance_status.ISO27001 ? bucket.compliance_status.ISO27001.compliance_percentage : 'N/A',
+                    bucket.compliance_status.GDPR ? bucket.compliance_status.GDPR.compliance_percentage : 'N/A'
+                ];
+
+                csvRows.push(row.join(','));
+            });
+
+            return csvRows.join('\n');
+        }
+
+        function escapeCSV(field) {
+            if (field === null || field === undefined) return '';
+            
+            const str = String(field);
+            if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                return '"' + str.replace(/"/g, '""') + '"';
+            }
+            return str;
+        }
+
+        function formatTimestamp() {
+            const now = new Date();
+            return now.toISOString().slice(0, 19).replace(/[:-]/g, '').replace('T', '_');
+        }
+
+        function downloadFile(content, filename, contentType) {
+            const blob = new Blob([content], { type: contentType });
+            const url = window.URL.createObjectURL(blob);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = filename;
+            link.style.display = 'none';
+            
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            window.URL.revokeObjectURL(url);
+            
+            // Show success message
+            showExportSuccess(filename);
+        }
+
+        function showExportSuccess(filename) {
+            // Create temporary success message
+            const message = document.createElement('div');
+            message.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                background: linear-gradient(135deg, #059669, #047857);
+                color: white;
+                padding: 1rem 1.5rem;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                z-index: 1000;
+                font-weight: 600;
+                font-size: 0.875rem;
+                opacity: 0;
+                transform: translateY(-20px);
+                transition: all 0.3s ease;
+            `;
+            message.innerHTML = `✅ Successfully exported: ${filename}`;
+            
+            document.body.appendChild(message);
+            
+            // Animate in
+            setTimeout(() => {
+                message.style.opacity = '1';
+                message.style.transform = 'translateY(0)';
+            }, 100);
+            
+            // Remove after 3 seconds
+            setTimeout(() => {
+                message.style.opacity = '0';
+                message.style.transform = 'translateY(-20px)';
+                setTimeout(() => document.body.removeChild(message), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
