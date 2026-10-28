@@ -8,7 +8,7 @@
   <a href="https://hub.docker.com/r/tarekcheikh/s3-security-scanner"><img src="https://img.shields.io/docker/v/tarekcheikh/s3-security-scanner?label=docker&logo=docker" alt="Docker"></a>
   <a href="https://hub.docker.com/r/tarekcheikh/s3-security-scanner"><img src="https://img.shields.io/docker/pulls/tarekcheikh/s3-security-scanner" alt="Docker Pulls"></a>
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-brightgreen.svg" alt="License: MIT"></a>
-  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.8+-blue.svg" alt="Python"></a>
+  <a href="https://www.python.org/downloads/"><img src="https://img.shields.io/badge/python-3.11+-blue.svg" alt="Python"></a>
   <a href="https://aws.amazon.com/s3/"><img src="https://img.shields.io/badge/AWS-S3-orange.svg" alt="AWS"></a>
 </p>
 
@@ -331,7 +331,7 @@ docker run --rm \
 ## Prerequisites
 
 ### Python Requirements
-- Python 3.8 or higher
+- Python 3.11 or higher
 - Required packages (installed automatically):
   - `boto3>=1.26.0`
   - `rich>=13.0.0`
@@ -836,4 +836,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Performance Note**: Object-level scanning is sample-based (default: 100 objects per bucket) to balance security coverage with scan performance. For comprehensive object analysis, consider running dedicated object-level security tools.
 
-**Version Compatibility**: This tool supports Python 3.8+ and is tested against the latest boto3 SDK versions. For legacy Python versions, please use an earlier release or upgrade your Python environment.
+**Version Compatibility**: This tool supports Python 3.11+ and is tested against the latest boto3 SDK versions. For legacy Python versions, please use an earlier release or upgrade your Python environment.

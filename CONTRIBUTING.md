@@ -6,7 +6,7 @@ Thank you for your interest in contributing to the S3 Security Scanner! We welco
 
 ### Prerequisites
 
-- Python 3.8 or higher
+- Python 3.11 or higher
 - Git
 - AWS CLI configured with appropriate credentials
 - Good understanding of AWS S3 security concepts

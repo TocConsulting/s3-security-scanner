@@ -4,10 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "s3-security-scanner"
-version = "1.0.6"
+version = "1.1.0"
 description = "A comprehensive AWS S3 bucket security scanner with compliance mapping"
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.11"
 license = "MIT"
 authors = [
     {name = "Toc Consulting", email = "tarek@tocconsulting.fr"}
@@ -20,9 +20,6 @@ classifiers = [
     "Topic :: Security",
     "Topic :: System :: Systems Administration",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -73,7 +70,7 @@ include = ["s3_security_scanner*"]
 
 [tool.black]
 line-length = 79
-target-version = ['py38', 'py39', 'py310', 'py311', "py312", "py313"]
+target-version = ['py311', "py312", "py313"]
 include = '\.pyi?$'
 
 [tool.flake8]
@@ -82,7 +79,7 @@ extend-ignore = ["E203", "W503"]
 exclude = [".git", "__pycache__", "build", "dist", "s3_security_scanner.egg-info"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
